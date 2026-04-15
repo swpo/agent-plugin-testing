@@ -1,0 +1,19 @@
+{
+  "name": "hive-store-dev",
+  "owner": {
+    "name": "Hive",
+    "email": "hello@thisisagenthive.com"
+  },
+  "metadata": {
+    "description": "Development marketplace for the Hive Agent Store experimental phase. Not a production marketplace."
+  },
+  "plugins": [
+    {
+      "name": "spoho-style-assistant",
+      "source": "./plugins/spoho-style-assistant",
+      "description": "Test payload for the Hive Agent Store plugin pipeline. A persistent style assistant with personal facts and a prose linter.",
+      "category": "demo",
+      "keywords": ["test", "style", "demo", "hive-store"]
+    }
+  ]
+}

@@ -1,82 +1,83 @@
-# Install Recipe (Phase -1)
+# Install Guide
 
-This is the instruction set we hand to Claude when asking it to install a Hive agent zip. In Phase 0 it becomes the `instructions` field in the `get_agent_package` MCP tool response.
+How a Hive agent plugin gets installed into Claude Code or Cowork. The mechanism is platform-native — no custom scripting; we're using the standard Claude plugin system.
 
-## Prompt template
+## From the Hive dev marketplace (this repo)
 
-```
-Install the Hive agent package at <ZIP_SOURCE> into this workspace.
+For local testing during Phase -1/0.
 
-Steps:
-1. If <ZIP_SOURCE> is a URL, download it to a temp file. If it's a local
-   path, use it directly. (If the caller provided a checksum, verify it
-   now before proceeding.)
-2. Read manifest.json out of the zip without extracting the whole archive
-   (e.g. `unzip -p <zip> manifest.json`). Get the "name" field.
-3. Create the install directory at:  <workspace>/.claude/skills/<name>/
-   If it already exists, remove it first — this is a clean install, not
-   an overlay, so stale files from a prior version are not carried over.
-4. Extract the zip into that directory.
-5. Verify SKILL.md and manifest.json exist in the install directory.
-6. Ensure any .sh files are executable (recursively):
-   `find <install-dir> -type f -name '*.sh' -exec chmod +x {} +`
-7. Confirm success by reading the installed SKILL.md and reporting the
-   skill name, version (from manifest.json — the SKILL.md frontmatter
-   is not the source of truth for version), and trigger.
+### Claude Code
 
-Do not read or modify payload file contents during install — no peeking
-inside SKILL.md, README.md, or the scripts beyond the permission step.
-Manifest is the only file you read to drive the install. The skill will
-be activated by a subsequent prompt in a fresh session.
-```
-
-## Concrete example (local zip, Claude Code)
-
-> Install the Hive agent package at `/Users/spoho/hive/agent-store/dist/spoho-style-assistant-1.0.0.zip` into this workspace. Follow the steps in `docs/install-recipe.md`.
-
-Expected filesystem state after install:
+From anywhere in Claude Code:
 
 ```
-<workspace>/.claude/skills/spoho-style-assistant/
-├── SKILL.md
-├── README.md
-├── manifest.json
-└── scripts/
-    └── style-check.sh   (executable)
+/plugin marketplace add /Users/spoho/hive/agent-store
+/plugin install spoho-style-assistant@hive-store-dev
+/reload-plugins
 ```
 
-## Acceptance test
+`/plugin marketplace add` also accepts GitHub shorthand (`owner/repo`) or a direct URL to a `marketplace.json` file.
 
-After install, start a **new** Claude session (so the newly-installed skill is loaded) in the same workspace and ask:
+Check it loaded:
+
+```
+/plugin
+```
+
+Go to the **Installed** tab — `spoho-style-assistant@hive-store-dev` should be present. If loading fails, check the **Errors** tab.
+
+### Cowork
+
+1. Push this repo to a GitHub repo you own (e.g. `github.com/<you>/hive-agent-store-dev`)
+2. In Cowork: **Organization settings → Plugins → Add plugin → GitHub**
+3. Paste the repo URL
+4. From the Marketplace UI, find `spoho-style-assistant` and click **Install**
+
+Cowork's plugin install is per-workspace-or-org — the exact scope depends on which install button you pick.
+
+## Acceptance tests
+
+After install, in a fresh conversation in the target runtime, try:
+
+**Test 1 — verify activation**
 
 > Is the style assistant installed?
 
-Expected response (exactly):
+Expected: response follows the strict style rules (opens with `Got it, here's the rundown:`, bullet points only, second person, closes with `— spoho-style-assistant`), includes the verification bullet list with version, rules loaded, personal facts count, helper script path, memory path.
 
-```
-Got it, here's the rundown:
-- spoho-style-assistant v1.0.0 is active
-- Rules loaded: opening phrase, closing phrase, bullet-only, second person
-- Personal facts table: 5 entries
-- Helper script: scripts/style-check.sh (run `bash <skill-dir>/scripts/style-check.sh <file>` to test)
-— spoho-style-assistant v1.0.0
-```
-
-A second, stronger test:
+**Test 2 — fact recall**
 
 > What's my favorite food?
 
-Expected response begins with `Got it, here's the rundown:`, contains `Spicy Korean BBQ short rib tacos`, and ends with `— spoho-style-assistant v1.0.0`.
+Expected: response includes `Spicy Korean BBQ short rib tacos`, wrapped in the style rules.
 
-A third, verifies the bundled script runs:
+**Test 3 — script invocation**
 
-> Style-check this file: `<any markdown file>`
+> Style-check this file: `<any markdown file in scope>`
 
-Expected response reports the output of `bash .claude/skills/spoho-style-assistant/scripts/style-check.sh <file>`, wrapped in the style rules.
+Expected: response reports the output of `bash ${CLAUDE_PLUGIN_ROOT}/scripts/style-check.sh <file>`, wrapped in the style rules.
 
-## What to watch for
+**Test 4 — memory discipline**
 
-- **Skill activation timing:** does it activate in the same session, or does it require a fresh session? Worth knowing for UX.
-- **Permission prompts:** does Claude Code prompt before executing `unzip`? Before running the bundled script? We want to know the friction surface.
-- **Cowork filesystem visibility:** where does `.claude/skills/` need to live in Cowork — in the workspace root or the VM home dir?
-- **Script execution in Cowork:** can Cowork run `bash scripts/style-check.sh` from an installed skill, or is there a sandbox wall?
+> What do you remember about me?
+
+Expected on first install: skill reads `${CLAUDE_PLUGIN_DATA}/memory.md`, reports that the file is empty or absent, offers to start tracking.
+
+After several interactions where the user corrects the agent or shares preferences, re-run the test: skill should report some accumulated entries from `${CLAUDE_PLUGIN_DATA}/memory.md`.
+
+## What we're watching for
+
+Things that tell us the plugin system is (or isn't) behaving the way we expect:
+
+- **Skill activation** — does the persona shape every response, or only when the plugin name is mentioned?
+- **Environment variable substitution** — does Claude see absolute paths in `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}`, or literal placeholder strings?
+- **Script execution** — does Claude have permission to run bash scripts inside the plugin cache? Any prompts?
+- **Memory file creation** — does `${CLAUDE_PLUGIN_DATA}` auto-create when first referenced, or does Claude need to `mkdir -p` first?
+- **Cowork parity** — does the persona shape main-Claude responses in Cowork the same way it does in Claude Code? Or does Cowork only surface the skill on explicit invocation?
+- **Permission prompts** — does the install flow prompt for plugin authorization on first use? How does that feel?
+
+## Uninstall
+
+Claude Code: `/plugin uninstall spoho-style-assistant@hive-store-dev` — prompts before deleting `${CLAUDE_PLUGIN_DATA}`; pass `--keep-data` to preserve.
+
+Cowork: Organization settings → Plugins → remove.

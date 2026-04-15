@@ -69,9 +69,52 @@ The recipe said not to read file contents, but step 2 required reading `manifest
 - We do **not** yet know whether skill activation is automatic in the same session or requires a fresh session. Must verify by hand.
 - We do **not** yet know Cowork behavior. Must verify by hand.
 
-## TODO
+## Test 3: Cowork skill-discovery gap — blocking finding
 
-- [ ] User test: open fresh Claude Code session, run acceptance tests from `install-recipe.md`
-- [ ] User test: install into Cowork workspace, run acceptance tests there
-- [ ] Record Cowork-specific findings (filesystem paths, egress, script execution)
-- [ ] If findings are clean, move to Phase 0
+User tested the pre-installed `/tmp/hive-store-test/` in a Cowork workspace. Cowork did not auto-load the skill from the mounted `.claude/skills/` directory, and `/style-check` didn't register as a command.
+
+Cowork's reply (paraphrased): in Cowork, skills come from `<available_skills>` at session start, sourced from *bundled Anthropic skills + installed plugin skills*. A loose folder in a mounted project is not scanned. The model can still `Read` and hand-follow the rules if pointed at them, but the runtime doesn't treat it as a registered skill. Slash-commands aren't wired to project-local skill files either. The assistant suggested "package as a Cowork plugin" as the path forward.
+
+**This invalidates the core premise of the original spec** — "drop a zip, it becomes a skill" works only in Claude Code, not Cowork. A real product has to use the plugin system.
+
+## Pivot: from filesystem drop to plugin marketplace
+
+Research (see `../PLAN.md`, sources at end of this file) confirmed:
+
+- Claude Code and Cowork share the **Claude plugin system** as their registration mechanism
+- Plugins are distributed via **marketplaces** — either a Git repo with `.claude-plugin/marketplace.json`, or a raw HTTPS URL serving the same JSON
+- Install is platform-native (`/plugin install` in Code; Marketplace UI in Cowork); **no custom MCP connector needed for install**
+- Plugins bundle `skills/`, `agents/` (subagents), `commands/`, `hooks/`, `.mcp.json`, `bin/`, `scripts/`
+- Persistent storage: `${CLAUDE_PLUGIN_DATA}` (per-plugin dir surviving updates) and subagent `memory: user|project|local` (per-subagent memory dir)
+- Paid-agent auth: private npm registry via `npm` source + `registry` field — standard npm auth gates downloads
+- **Per-user dynamic marketplaces are possible** by serving `marketplace.json` from a server endpoint that varies content by auth token in URL. Plugin sources within point to public GitHub repos (or private with token), or npm packages
+
+The original MCP-connector-for-install architecture is now **optional**, possibly revisited at Phase 2 for in-chat discovery only.
+
+## Phase -1 v2 plan
+
+Restructure the sample agent as a proper plugin + local marketplace:
+
+```
+agent-store/
+├── .claude-plugin/marketplace.json
+├── plugins/
+│   └── spoho-style-assistant/
+│       ├── .claude-plugin/plugin.json
+│       ├── skills/spoho-style-assistant/SKILL.md  # persona + memory discipline
+│       └── scripts/style-check.sh
+```
+
+Product pattern: **skill-as-agent (Pattern B)** — skill body carries the agent persona, references `${CLAUDE_PLUGIN_DATA}/memory.md` for accumulated learning. Works identically in Code and Cowork. Pattern A (subagent with `memory: user`) is held for later, higher-tier product offerings.
+
+See `../PLAN.md` Phase -1 (v2) for the test checklist.
+
+## Sources
+
+- [Claude Code plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
+- [Claude Code plugins reference](https://code.claude.com/docs/en/plugins-reference)
+- [Claude Code discover/install plugins](https://code.claude.com/docs/en/discover-plugins)
+- [Claude Code subagents](https://code.claude.com/docs/en/sub-agents)
+- [Claude Code settings](https://code.claude.com/docs/en/settings)
+- [Use plugins in Claude Cowork](https://support.claude.com/en/articles/13837440-use-plugins-in-claude-cowork)
+- [Get started with Claude Cowork](https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork)
