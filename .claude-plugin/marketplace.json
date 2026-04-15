@@ -7,5 +7,13 @@
   "metadata": {
     "description": "Development marketplace for building and testing Hive agent plugins. Not a production marketplace."
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "lead-scout",
+      "source": "./plugins/lead-scout",
+      "description": "Lead research agent. Finds companies in a given industry whose websites meet specified constraints, extracts contact information, and writes a CSV of leads to the workspace.",
+      "category": "research",
+      "keywords": ["leads", "research", "contact", "scraping", "firecrawl"]
+    }
+  ]
 }
