@@ -28,12 +28,18 @@ Go to the **Installed** tab — `spoho-style-assistant@hive-store-dev` should be
 
 ### Cowork
 
-1. Push this repo to a GitHub repo you own (e.g. `github.com/<you>/hive-agent-store-dev`)
-2. In Cowork: **Organization settings → Plugins → Add plugin → GitHub**
-3. Paste the repo URL
-4. From the Marketplace UI, find `spoho-style-assistant` and click **Install**
+1. In Cowork: **Organization settings → Plugins → Add plugin → GitHub**
+2. Paste repo URL: `https://github.com/swpo/hive-agent-store` (or `swpo/hive-agent-store` shorthand)
+3. From the Marketplace UI, find `spoho-style-assistant` and click **Install**
 
 Cowork's plugin install is per-workspace-or-org — the exact scope depends on which install button you pick.
+
+### Claude Code from the GitHub repo (alternative to the local path)
+
+```
+/plugin marketplace add swpo/hive-agent-store
+/plugin install spoho-style-assistant@hive-store-dev
+```
 
 ## Acceptance tests
 
