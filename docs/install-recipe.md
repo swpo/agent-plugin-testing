@@ -8,17 +8,26 @@ This is the instruction set we hand to Claude when asking it to install a Hive a
 Install the Hive agent package at <ZIP_SOURCE> into this workspace.
 
 Steps:
-1. If <ZIP_SOURCE> is a URL, download it to a temp file. If it's a local path, use it directly.
-2. Create the install directory:  .claude/skills/<agent-name>/
-   where <agent-name> is the "name" field in manifest.json inside the zip.
-3. Extract the zip into that directory. Overwrite existing files if present.
-4. Verify SKILL.md and manifest.json exist in the install directory.
-5. If a scripts/ directory exists, chmod +x any .sh files inside it.
-6. Confirm success by reading the newly-installed SKILL.md and reporting the
-   skill name, version, and trigger.
+1. If <ZIP_SOURCE> is a URL, download it to a temp file. If it's a local
+   path, use it directly. (If the caller provided a checksum, verify it
+   now before proceeding.)
+2. Read manifest.json out of the zip without extracting the whole archive
+   (e.g. `unzip -p <zip> manifest.json`). Get the "name" field.
+3. Create the install directory at:  <workspace>/.claude/skills/<name>/
+   If it already exists, remove it first — this is a clean install, not
+   an overlay, so stale files from a prior version are not carried over.
+4. Extract the zip into that directory.
+5. Verify SKILL.md and manifest.json exist in the install directory.
+6. Ensure any .sh files are executable (recursively):
+   `find <install-dir> -type f -name '*.sh' -exec chmod +x {} +`
+7. Confirm success by reading the installed SKILL.md and reporting the
+   skill name, version (from manifest.json — the SKILL.md frontmatter
+   is not the source of truth for version), and trigger.
 
-Do not read or modify file contents inside the zip during install. The skill
-is active immediately after extraction — a subsequent prompt will test it.
+Do not read or modify payload file contents during install — no peeking
+inside SKILL.md, README.md, or the scripts beyond the permission step.
+Manifest is the only file you read to drive the install. The skill will
+be activated by a subsequent prompt in a fresh session.
 ```
 
 ## Concrete example (local zip, Claude Code)
