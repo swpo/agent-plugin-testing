@@ -1,10 +1,18 @@
 {
   "name": "lead-scout",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lead research agent. Finds companies in a given industry whose websites meet specified constraints, extracts contact information, and writes a CSV of leads to the workspace. Uses Firecrawl when available, falls back to web search.",
   "author": {
     "name": "Hive"
   },
   "keywords": ["leads", "research", "contact", "scraping", "firecrawl", "hive-store"],
-  "license": "MIT"
+  "license": "MIT",
+  "userConfig": {
+    "firecrawl_api_key": {
+      "type": "string",
+      "title": "Firecrawl API key",
+      "description": "Your Firecrawl API key from firecrawl.dev. Optional — leave blank to use the WebSearch/WebFetch fallback. Stored in the system keychain; never visible to Claude in conversation. Update anytime via plugin settings.",
+      "sensitive": true
+    }
+  }
 }

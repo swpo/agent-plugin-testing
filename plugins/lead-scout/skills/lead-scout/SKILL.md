@@ -71,13 +71,23 @@ This preview is the cheapest redirect point — before any credits/tokens are sp
 
 ### 3. Verify tooling
 
-Based on `firecrawl-status` and preferences:
+`${CLAUDE_PLUGIN_DATA}/firecrawl-status` reports these fields:
 
-| Status | Preference | Action |
+- `cli_installed` — yes/no — is the `firecrawl` command available in this environment
+- `plugin_api_key_set` — yes/no — has the user entered a key via the plugin's `firecrawl_api_key` config (keychain-stored). This is orthogonal to `authenticated` — firecrawl may auth via stored creds or existing env vars even if the plugin key is unset.
+- `authenticated` — yes/no — does `firecrawl --status` succeed (regardless of which source provided the key)
+- `ready` — yes/no — `cli_installed` AND `authenticated`. This is the one-line decision field.
+- `credits_remaining` — integer or unknown
+
+**Never ask the user for their API key in conversation.** The key lives in the plugin config UI (keychain-backed). If it's missing, direct the user to either the `firecrawl-onboarding` skill or to configure it via plugin settings. You never see the value yourself.
+
+Based on `ready` and preferences:
+
+| `ready` | Preference | Action |
 |---|---|---|
-| ready | any | Use firecrawl |
-| not installed / not authed | `firecrawl_preference: fallback-only` | Use WebSearch + WebFetch silently |
-| not installed / not authed | unset or `use-firecrawl` | Before starting, say: "Firecrawl isn't set up. Want me to run the `firecrawl-onboarding` skill now (1 min), or proceed with web search fallback?" Record the user's choice in `preferences.md` as `firecrawl_preference: <use-firecrawl|fallback-only>` so you don't ask again. |
+| `yes` | any | Use firecrawl. If `credits_remaining` is below 2× the planned run cost (~1 credit per scrape), warn the user. |
+| `no` | `firecrawl_preference: fallback-only` | Use WebSearch + WebFetch silently. |
+| `no` | unset or `use-firecrawl` | Tell the user the state briefly (e.g., "firecrawl CLI isn't installed" or "no API key configured yet"), and offer the choice: "Run `firecrawl-onboarding` now to set it up, or skip and use the WebSearch/WebFetch fallback?" Record the choice in `preferences.md` so you don't ask again. |
 
 ### 4. Discover candidates
 
