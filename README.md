@@ -1,38 +1,41 @@
-# Hive Agent Store (experimental)
+# Hive Agent Plugin Testing
 
-Experimental sibling to the main Hive monorepo. This directory is the workbench for a new Hive vertical: **a store where users buy AI agents**, installed into Claude Code or Cowork via the native Claude plugin system.
+Sibling to the main Hive monorepo. Workbench for building and iterating on Claude plugins that will eventually populate the Hive Agent Store.
 
-See `PLAN.md` for the full staged plan. See `../hive/` for the production Hive codebase.
+Distributes plugins via the `hive-store-dev` marketplace (this repo's `.claude-plugin/marketplace.json`). Pushes to GitHub for Cowork to consume.
 
 ## Status
 
-**Phase -1 (v2)** — validating the **plugin format** install path in both Claude Code and Cowork. The filesystem-drop approach explored in the first pass works in Claude Code but does not in Cowork; plugins are the unified install unit for both runtimes.
+**Phase -1 complete:** the install pipeline works end-to-end. A plugin in this repo's `plugins/` directory, listed in `marketplace.json`, can be installed via `/plugin install <name>@hive-store-dev` in Claude Code or through the Marketplace UI in Cowork after adding `swpo/agent-plugin-testing` as a source. Persona-shaping via skill description has known limits in Cowork (skills auto-invoke on description match, not always-on).
+
+**Phase 0 (current):** build a first real plugin — a lead-research agent that finds contact info for companies in a given industry subject to website constraints. Use it to learn what the right plugin shape is for "real" agent products.
 
 ## Layout
 
 ```
 agent-store/
-├── .claude-plugin/
-│   └── marketplace.json             # Hive dev marketplace catalog
-├── plugins/
-│   └── spoho-style-assistant/       # First test payload
-│       ├── .claude-plugin/plugin.json
-│       ├── skills/spoho-style-assistant/SKILL.md
-│       ├── scripts/style-check.sh
-│       └── README.md
+├── .claude-plugin/marketplace.json   # hive-store-dev catalog
+├── plugins/                          # plugins in development (currently empty)
 ├── docs/
-│   ├── install-recipe.md            # User-facing install walkthrough
-│   └── phase-minus-1-findings.md    # Running log of what we learned
-├── PLAN.md                          # Staged plan through MVP
-└── README.md                        # This file
+│   └── phase-minus-1-findings.md     # install-pipeline-validation log
+├── PLAN.md                           # staged plan through MVP
+└── README.md                         # this file
 ```
 
-## Why Cowork is the primary target
+## Install for development
 
-Claude Code users can already configure agents manually (write SKILL.md, drop it into `.claude/skills/`, done). The product-market fit for the Agent Store is Cowork — desktop/web users who don't have the terminal-level configurability and benefit from "click install, agent is ready." The store builds toward that audience while remaining compatible with Claude Code.
+From any Claude Code session:
+
+```
+/plugin marketplace add swpo/agent-plugin-testing
+/plugin install <plugin-name>@hive-store-dev
+/reload-plugins
+```
+
+Cowork: Organization settings → Plugins → Add plugin → GitHub → `swpo/agent-plugin-testing`.
 
 ## Not in scope here (yet)
 
 - Production storefront UI — eventually in `../hive/packages/web/app/store/`
-- Per-user dynamic marketplace backend — eventually in `../hive/packages/store-api/` as a new Railway service
-- OAuth, Stripe, account management — reuses main Hive infra when we wire it up
+- Per-user dynamic marketplace backend — eventually in `../hive/packages/store-api/`
+- OAuth, Stripe, account management — reuses main Hive infra when wired up

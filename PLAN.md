@@ -22,30 +22,37 @@ Each agent ships as a plugin whose **skill body is the agent persona + memory di
 
 First attempt. Built a zip, tested direct install into `.claude/skills/`. Worked in Claude Code, did not work in Cowork (skills require plugin registration in that runtime, not just filesystem presence). Findings in `docs/phase-minus-1-findings.md`. Approach abandoned in favor of plugins.
 
-## Phase -1 (v2) — plugin format validation (current)
+## Phase -1 (v2) — plugin format validation — DONE
 
-**Goal:** prove that a plugin + local marketplace loads and activates correctly in both Claude Code and Cowork, with no infra standing up yet.
+Built `spoho-style-assistant` as a plugin, hosted the marketplace in this repo, tested install in both Claude Code and Cowork. Install pipeline works end-to-end — the plugin loads, files land in the right cache, `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}` substitute correctly.
 
-- [x] Restructure sample agent as a plugin (`plugins/spoho-style-assistant/`)
-- [x] Write `.claude-plugin/marketplace.json` listing the plugin
-- [ ] Test `/plugin marketplace add` + `/plugin install` in Claude Code (local repo path)
-- [ ] Push to GitHub so Cowork can reach it
-- [ ] Add marketplace in Cowork (Org settings → Plugins → Add plugin → GitHub)
-- [ ] Verify activation in both runtimes with the acceptance tests from `plugins/spoho-style-assistant/README.md`
-- [ ] Document findings
+Key finding: skills in plugins are **not always-on** — they activate when Claude judges the task matches the description, or when the user explicitly invokes them. For truly persistent persona behavior we'd need output styles or subagent-as-primary. See `docs/phase-minus-1-findings.md`.
 
-## Phase 0 — dynamic marketplace endpoint
+Test plugin removed (2026-04-15) in favor of iterating on a real plugin.
 
-**Goal:** prove the per-user marketplace pattern — a JSON endpoint that returns a different catalog based on auth.
+## Phase 0 — first real plugin: lead research agent (current)
 
-- Small Node/TS service that serves `marketplace.json` dynamically at a URL like `localhost:3100/m/<token>`
-- Hardcoded "user database" — 2-3 fake users with different agent purchases
-- Each user's marketplace lists different subsets of agents
-- Agents themselves are hosted as GitHub repos (plugin sources use `github` source type)
-- Run locally, expose via ngrok, test adding the URL as a marketplace in Cowork
-- Validate: switching the user token changes what the Marketplace UI shows
+**Goal:** build a useful plugin to learn what the right shape is for real agent products, before investing in infrastructure (dynamic marketplace endpoint, storefront, payments).
 
-Still no Hive backend involvement — just proving the dynamic-endpoint pattern works with Cowork's plugin system.
+**The task:** find contact info for companies in a given industry meeting website-level constraints. Examples:
+- Title insurance companies that have a contact page on their website
+- Pilates studios offering private instruction
+
+**Why this task is a good first target:** it exercises web search, web fetch, structured extraction, dedup, and CSV/structured output — representative of a common "research agent" product category. Reveals whether plugins can handle real work or need external infra.
+
+**Design decisions to reason through (WIP):**
+- In-context (Claude uses WebSearch + WebFetch natively) vs shell-out (bundled scripts do heavy lifting) vs MCP server (specialized tools)
+- Single mega-skill vs composable skills (discover → filter → extract → compile)
+- Where the output lives (cwd CSV? `${CLAUDE_PLUGIN_DATA}` for cross-session memory of previously-researched lists?)
+- What the "memory" component is — patterns learned about where contact info lives, known-spammy sites to skip, user's output preferences
+
+## Phase 1 — dynamic marketplace endpoint
+
+Deferred until we have at least one real plugin to distribute. Same design as before: per-user JSON endpoint returning filtered agent catalog based on auth token.
+
+## Phase 2 — production MVP
+
+Shippable minimum: move plugin development into the Hive monorepo, storefront, Stripe, per-user marketplace backend on Railway.
 
 ## Phase 1 — production MVP
 
