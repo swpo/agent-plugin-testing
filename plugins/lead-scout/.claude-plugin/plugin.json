@@ -1,6 +1,6 @@
 {
   "name": "lead-scout",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lead research agent. Finds companies in a given industry whose websites meet specified constraints, extracts contact information, and writes a CSV of leads to the workspace. Uses Firecrawl when available, falls back to web search.",
   "author": {
     "name": "Hive"

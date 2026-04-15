@@ -23,12 +23,51 @@ Don't dump these to the user. Use them to inform decisions.
 From the user's prompt, extract:
 
 - **industry** — what kind of company (e.g. "title insurance", "pilates studios")
-- **geography** — city/state/region/country, if specified; otherwise fall back to preferences or ask
-- **constraint** — the website-level filter in natural language (e.g. "has a contact page", "offers private instruction")
-- **batch_size** — how many candidates to research. Default 15. User may say "run 20" or similar.
-- **output_columns** — CSV columns. Default: `company_name, url, match_status, match_evidence, contact_page_url, email, phone, address, principal_name, notes`. User may override.
+- **geography** — city/state/region/country, if specified
+- **constraint** — the website-level filter in natural language (e.g. "has a contact page", "offers private instruction"). May be absent — that's valid, it just means "compile a plain list, no filter."
+- **batch_size** — how many candidates to research. Default 15.
+- **output_columns** — CSV columns. Default: `company_name, url, match_status, match_evidence, contact_page_url, email, phone, address, principal_name, notes`.
 
-If any of industry, constraint, or geography is truly missing and preferences don't fill it, ask one consolidated clarifying question. Otherwise proceed.
+Classify each field as one of three states:
+
+- **Missing** — nothing in the prompt, nothing in `${CLAUDE_PLUGIN_DATA}/preferences.md`.
+- **Vague** — present but underspecified (e.g., geography = "California" when looking for local businesses — a whole state is too broad for a 15-item sample; constraint = "good" or another subjective term).
+- **Present** — explicit and unambiguous enough to proceed.
+
+Rules:
+
+- **Industry missing** → blocking, ask.
+- **Geography missing** AND no default in preferences → blocking, ask. A default like "use my usual focus" counts as present.
+- **Constraint missing** → **not** blocking. Proceed with `constraint = null`; the subagents will skip the per-site constraint check and just extract contact info.
+- **Any field vague** → proceed, but commit to a concrete interpretation and surface it in step 2b so the user can redirect.
+- **batch_size / output_columns** → silent defaults if unspecified.
+
+### 2a. Clarify only when something is blocking
+
+When a blocking field is missing, bundle the questions into a single message and offer sensible defaults. Example:
+
+> I need a bit more to go on:
+> - **Industry** — what type of company? (e.g. "title insurance", "pilates studios")
+> - **Geography** — any specific area, or go nationwide / use your usual focus?
+> - **Constraint** (optional) — any website requirement like "has a contact page", or just compile a plain list?
+>
+> Or say "use defaults" and I'll pick reasonable ones.
+
+Ask at most once per run. If the user says "use defaults" or "you pick," proceed with your best interpretations and surface them in the preview.
+
+### 2b. Preview before spending credits
+
+Before calling any search API, echo back a one-line preview of what you're about to do and pause for confirmation. Format:
+
+> Planning: ~15 pilates studios in Austin, TX. Constraint: "offers private instruction". Output: CSV in the current directory. Ok to proceed?
+
+If you resolved any vagueness, flag the interpretation explicitly so the user can redirect:
+
+> Planning: ~15 pilates studios. "California" is broad for a 15-item sample — I'll focus on the top 3 metros (LA, SF Bay, San Diego) unless you prefer a specific city. Constraint: "offers private instruction". Ok?
+
+> Planning: ~15 locksmiths in Denver. "Trustworthy" is subjective — I'll interpret as "business has been operating 3+ years AND has a visible professional license on the site." Ok, or different bar?
+
+This preview is the cheapest redirect point — before any credits/tokens are spent. Skip it only if the user preemptively said "just run it" or "no need to confirm."
 
 ### 3. Verify tooling
 
