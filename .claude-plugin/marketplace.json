@@ -1,11 +1,10 @@
 {
   "name": "hive-store-dev",
   "owner": {
-    "name": "Hive",
-    "email": "hello@thisisagenthive.com"
+    "name": "Agent Plugin Testing"
   },
   "metadata": {
-    "description": "Development marketplace for building and testing Hive agent plugins. Not a production marketplace."
+    "description": "Development marketplace for building and testing agent plugins."
   },
   "plugins": [
     {
