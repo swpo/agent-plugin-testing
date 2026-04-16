@@ -75,7 +75,7 @@ The orchestrator handles the rest.
 
 ## Status
 
-v0.1.0 — first test version. Things to learn from real runs:
+v0.2.0 — MCP-first. Firecrawl via remote connector (no CLI dependency). Things to learn from real runs:
 - Does the multi-source discovery produce enough unique candidates?
 - How often do sites 404 / anti-bot / JS-out-of-reach? Worth adding retry logic?
 - Is 5–10 subagents in parallel the right batch size, or can we go higher?
