@@ -19,8 +19,8 @@ Given one company, check whether its website matches a constraint and — if yes
 
 ### 1. Fetch the homepage
 
-- If `firecrawl_available`: `firecrawl scrape <url> --only-main-content -o -` (stdout)
-- Else: WebFetch tool on the URL, with a prompt that asks for the page content as markdown
+- If Firecrawl MCP tools are available (`firecrawl_scrape` or similar): call the firecrawl scrape tool on the URL. Firecrawl returns clean markdown of the main content.
+- Else: WebFetch tool on the URL, with a prompt asking for the page content as markdown.
 
 ### 2. Look for a contact page link
 

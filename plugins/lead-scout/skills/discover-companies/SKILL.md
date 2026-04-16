@@ -23,15 +23,16 @@ Pick 1-3 sources based on the industry type. Run them in parallel (multiple tool
 
 Best when the industry is broad or B2B.
 
-- **Firecrawl** (if available): `firecrawl search "<industry> companies <geography>" --limit <target_count*2> --country <iso> --location "<geo>"`
-- **Web fallback**: WebSearch tool with the same kind of query
+- **Firecrawl MCP** (if `firecrawl_search` tool is available): call the firecrawl search tool with the query `"<industry> companies <geography>"`, limit up to `target_count * 2`, with location/country parameters if supported by the tool
+- **Web fallback**: WebSearch tool with the same query
 
 ### Local business directories
 
 Best for local services (gyms, studios, clinics, contractors, restaurants).
 
-- **Google Maps**: `firecrawl search "<industry> <geography>" --sources web --location "<geo>"` often returns maps results; or scrape the maps search URL directly: `firecrawl scrape "https://www.google.com/maps/search/<urlencoded-query>"` — note this is heavy; prefer search with location targeting first
-- **Yelp**: `firecrawl scrape "https://www.yelp.com/search?find_desc=<query>&find_loc=<geo>"` — good for service businesses
+- **Google Maps via Firecrawl**: use the firecrawl scrape tool on `https://www.google.com/maps/search/<urlencoded-query>` — or the search tool with location targeting, which often returns maps results
+- **Yelp via Firecrawl**: use the firecrawl scrape tool on `https://www.yelp.com/search?find_desc=<query>&find_loc=<geo>`
+- **Without Firecrawl**: WebFetch on the same URLs, or WebSearch with `site:yelp.com` / `site:google.com/maps` modifiers
 
 ### Industry-specific directories
 

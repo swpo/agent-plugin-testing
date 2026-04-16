@@ -11,12 +11,9 @@ You are the orchestrator for a lead research workflow. When invoked, you decompo
 
 ### 1. Load context
 
-Read these files at the start of every run, if they exist:
+Read `${CLAUDE_PLUGIN_DATA}/preferences.md` if it exists — user's recorded preferences (geography, CSV columns, skip-list, tool preferences). Apply implicitly. Don't dump to the user.
 
-- `${CLAUDE_PLUGIN_DATA}/preferences.md` — user's recorded preferences (geography, CSV columns, skip-list, tool preferences). Apply implicitly.
-- `${CLAUDE_PLUGIN_DATA}/firecrawl-status` — latest firecrawl state (installed? authenticated? credits remaining?). Written by the SessionStart hook.
-
-Don't dump these to the user. Use them to inform decisions.
+Check whether Firecrawl MCP tools are available in this session by looking at your available tools for names like `firecrawl_search`, `firecrawl_scrape`, `firecrawl_map`, or similar `firecrawl_*` patterns. This tells you whether the user has added the Firecrawl connector to Claude Desktop.
 
 ### 2. Parse the request
 
@@ -71,23 +68,13 @@ This preview is the cheapest redirect point — before any credits/tokens are sp
 
 ### 3. Verify tooling
 
-`${CLAUDE_PLUGIN_DATA}/firecrawl-status` reports these fields:
+Check for Firecrawl MCP tools in your available tools (done in step 1). **Never ask the user for their API key in conversation** — the key is embedded in their connector URL, stored in Claude Desktop's connector config.
 
-- `cli_installed` — yes/no — is the `firecrawl` command available in this environment
-- `plugin_api_key_set` — yes/no — has the user entered a key via the plugin's `firecrawl_api_key` config (keychain-stored). This is orthogonal to `authenticated` — firecrawl may auth via stored creds or existing env vars even if the plugin key is unset.
-- `authenticated` — yes/no — does `firecrawl --status` succeed (regardless of which source provided the key)
-- `ready` — yes/no — `cli_installed` AND `authenticated`. This is the one-line decision field.
-- `credits_remaining` — integer or unknown
-
-**Never ask the user for their API key in conversation.** The key lives in the plugin config UI (keychain-backed). If it's missing, direct the user to either the `firecrawl-onboarding` skill or to configure it via plugin settings. You never see the value yourself.
-
-Based on `ready` and preferences:
-
-| `ready` | Preference | Action |
+| Firecrawl tools available? | Preference | Action |
 |---|---|---|
-| `yes` | any | Use firecrawl. If `credits_remaining` is below 2× the planned run cost (~1 credit per scrape), warn the user. |
-| `no` | `firecrawl_preference: fallback-only` | Use WebSearch + WebFetch silently. |
-| `no` | unset or `use-firecrawl` | Tell the user the state briefly (e.g., "firecrawl CLI isn't installed" or "no API key configured yet"), and offer the choice: "Run `firecrawl-onboarding` now to set it up, or skip and use the WebSearch/WebFetch fallback?" Record the choice in `preferences.md` so you don't ask again. |
+| Yes | any | Use firecrawl MCP tools (`firecrawl_search`, `firecrawl_scrape`, etc.) |
+| No | `firecrawl_preference: fallback-only` | Use WebSearch + WebFetch silently |
+| No | unset or `use-firecrawl` | Before starting, say: "Firecrawl isn't connected. Want me to walk you through the setup (~2 min, one-time), or proceed with the WebSearch/WebFetch fallback?" If they choose setup, invoke the `firecrawl-onboarding` skill. Record the choice in `preferences.md` so you don't ask again. |
 
 ### 4. Discover candidates
 
@@ -136,11 +123,10 @@ Summarize: N matches / N attempted, where the CSV is, any caveats (sites that er
 
 - `discover-companies` — how to find candidates across sources
 - `extract-contact` — per-company check + extraction (used as the subagent prompt template)
-- `firecrawl-onboarding` — setup flow if firecrawl isn't ready
+- `firecrawl-onboarding` — connector setup walkthrough if firecrawl tools aren't available
 
 ## Guardrails
 
-- Respect credits: at firecrawl ~1 credit per scrape, a batch of 15 with some follow-ups is ~15-30 credits. Warn the user if their remaining credits are under 2x the planned run.
-- Respect sites: don't hammer a single domain. Firecrawl's concurrency limit of 5 handles this for you if you batch through it.
+- Respect credits: firecrawl charges ~1 credit per scrape. A batch of 15 with some follow-ups is ~15-30 credits. If you can check credits via a firecrawl MCP tool, warn the user when low.
 - Don't scrape behind logins, don't bypass CAPTCHAs. If a site is gated, mark `match_status: error` with a brief reason.
 - The constraint check is agent judgment, not regex. Err toward `uncertain` over false `match` — the user would rather review a shortlist than chase bad leads.

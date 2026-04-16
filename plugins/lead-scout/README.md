@@ -25,19 +25,19 @@ Four-stage pipeline orchestrated by the `lead-scout` skill:
 
 ## Firecrawl
 
-Preferred search backend. On install and at every session start, a hook checks whether Firecrawl is installed + authenticated, and writes the status to `${CLAUDE_PLUGIN_DATA}/firecrawl-status`.
+Preferred search/scrape backend, available via a remote MCP connector. One-time user setup:
 
-- **If Firecrawl is ready:** used automatically
-- **If not:** `firecrawl-onboarding` skill walks the user through install + auth. User can decline and use the fallback instead — their choice is recorded so they aren't re-asked
+1. Get API key at [firecrawl.dev/app](https://firecrawl.dev/app)
+2. Claude Desktop → **Customize → Connectors → Add custom connector** → URL: `https://mcp.firecrawl.dev/<KEY>/v2/mcp`
+3. Fresh conversation — Firecrawl tools are now available
 
-Fallback uses Claude's native `WebSearch` + `WebFetch` tools.
+The `firecrawl-onboarding` skill walks users through this if firecrawl tools are missing. Users who skip get the WebSearch + WebFetch fallback; preference is recorded so they aren't re-asked.
 
 ## Memory
 
 Persistent state in `${CLAUDE_PLUGIN_DATA}/`:
 
 - `preferences.md` — geographic defaults, CSV column defaults, domain skip-list, firecrawl preference. Terse one-liner entries with dates.
-- `firecrawl-status` — ephemeral runtime state, rewritten on each session start
 
 ## Contents
 
@@ -47,10 +47,8 @@ Persistent state in `${CLAUDE_PLUGIN_DATA}/`:
 | `skills/lead-scout/SKILL.md` | Orchestrator — the entry point |
 | `skills/discover-companies/SKILL.md` | Multi-source candidate discovery |
 | `skills/extract-contact/SKILL.md` | Per-company check + extraction (used as subagent prompt template) |
-| `skills/firecrawl-onboarding/SKILL.md` | Guided setup for the Firecrawl CLI |
-| `scripts/check-firecrawl.sh` | Status probe, called by the SessionStart hook |
+| `skills/firecrawl-onboarding/SKILL.md` | Guided connector setup for Firecrawl |
 | `scripts/compile-csv.py` | JSONL → CSV helper |
-| `hooks/hooks.json` | Registers the SessionStart hook |
 
 ## Usage
 
